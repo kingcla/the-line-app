@@ -1,6 +1,5 @@
 import 'dart:convert';
 import 'dart:core';
-import 'LocationManager.dart';
 import 'package:http/http.dart' as http;
 
 class MapCoordinates {
@@ -45,45 +44,53 @@ class TramManager {
   final String _getStationURL =
       'https://www.delijn.be/rise-api-core/haltes/indebuurt/';
 
-  Future<TramStation> getNearestStation(LocationCoordinates location,
+  Future<TramStation> getNearestStation(double latitude, double longitude,
       {int range = 100}) async {
     var client = http.Client();
     try {
-      var response = await client.get(_locationURL +
-          location.latitude.toString() +
-          '/' +
-          location.longitude.toString());
+      // First we need to convert the geo coordinates {latitude,longite}
+      // into DeLijn map coordinates {x,y}
+      var response = await client.get(
+        _locationURL + latitude.toString() + '/' + longitude.toString(),
+      );
 
-      if (response.statusCode != 200) {
-        print('Response status: ${response.statusCode}');
-        print('Response body: ${response.body}');
-
-        return null; //something went wrong
-      } else {
-        var parsed = json.decode(response.body).cast<Map<String, dynamic>>();
-        MapCoordinates coo = MapCoordinates.fromJson(parsed);
-
-        // Now that we have the x-y location converted
-        // we do another request for the closer tram station
-        response = await client.get(_getStationURL +
-            coo.x.toString() +
-            '/' +
-            coo.y.toString() +
-            '/' +
-            range.toString());
-
-        if (response.statusCode != 200) {
-          print('Response status: ${response.statusCode}');
-          print('Response body: ${response.body}');
-
-          return null; //something went wrong
-        } else {
-          parsed = json.decode(response.body).cast<Map<String, dynamic>>();
-          int stationID = parsed['halteNummer'];
-        }
+      if (!_checkResponse(response)) {
+        return null;
       }
+
+      var parsed = json.decode(response.body);
+      MapCoordinates coo = MapCoordinates.fromJson(parsed);
+
+      // Now that we have the x-y location converted
+      // we do another request for the closer tram station
+      response = await client.get(_getStationURL +
+          coo.x.toString() +
+          '/' +
+          coo.y.toString() +
+          '/' +
+          range.toString());
+
+      if (!_checkResponse(response)) {
+        return null;
+      }
+
+      parsed = json.decode(response.body);
+      int stationID = parsed['halteNummer'];
     } finally {
       client.close();
     }
+  }
+
+  bool _checkResponse(http.Response response) {
+    if (response.statusCode != 200) {
+      // something went wrong
+
+      print('Response status: ${response.statusCode}');
+      print('Response body: ${response.body}');
+
+      return false;
+    }
+
+    return true;
   }
 }
