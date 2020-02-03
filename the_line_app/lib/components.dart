@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
 
-enum LineType { tram, bus }
+import 'models.dart';
 
 class LineStopHeader extends StatefulWidget {
   LineStopHeader(this.name, this.number, {this.favourite = false, Key key})
@@ -45,6 +45,8 @@ class _LineStopHeaderState extends State<LineStopHeader> {
           title: Text(
             widget.name,
             style: Theme.of(context).textTheme.headline,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
           ),
           subtitle: Text(
             '#${widget.number}',
@@ -73,7 +75,9 @@ class TramLineTile extends StatelessWidget {
     this.type,
     this.number,
     this.name,
-    this.color, {
+    this.direction,
+    this.color,
+    this.minutes, {
     Key key,
   }) : super(key: key);
 
@@ -81,6 +85,8 @@ class TramLineTile extends StatelessWidget {
   final String number;
   final String name;
   final Color color;
+  final String direction;
+  final String minutes;
 
   @override
   Widget build(BuildContext context) {
@@ -127,9 +133,9 @@ class TramLineTile extends StatelessWidget {
             ],
           ),
         ),
-        subtitle: Text('in 8 minutes'),
+        subtitle: Text('direction $direction'),
         trailing: Text(
-          '8\'',
+          '$minutes\'',
           textScaleFactor: 2,
         ),
       ),
