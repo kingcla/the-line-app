@@ -1,15 +1,28 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
+import 'package:provider/provider.dart';
 
+import 'TramManager.dart';
+import 'favoritesmanager.dart';
+import 'messagemanager.dart';
 import 'models.dart';
 
 class LineStopHeader extends StatefulWidget {
-  LineStopHeader(this.name, this.number, {this.favourite = false, Key key})
-      : super(key: key);
+  LineStopHeader(
+    this.name,
+    this.number, {
+    this.favourite = false,
+    this.onSetFavourite,
+    key,
+  }) : super(key: key);
 
   final String name;
   final String number;
   final bool favourite;
+
+  final Function(String name, bool favourite) onSetFavourite;
 
   @override
   _LineStopHeaderState createState() => _LineStopHeaderState();
@@ -54,9 +67,14 @@ class _LineStopHeaderState extends State<LineStopHeader> {
           ),
           trailing: GestureDetector(
             onTap: () {
+              print('pre - ${widget.onSetFavourite}');
               setState(() {
                 _isFavourite = !_isFavourite;
               });
+
+              if (widget.onSetFavourite != null) {
+                widget.onSetFavourite(widget.number, _isFavourite);
+              }
             },
             child: Icon(
               _isFavourite ? Icons.star : Icons.star_border,
@@ -138,6 +156,183 @@ class TramLineTile extends StatelessWidget {
           '$minutes\'',
           textScaleFactor: 2,
         ),
+      ),
+    );
+  }
+}
+
+class CurrentStation extends StatefulWidget {
+  const CurrentStation({
+    Key key,
+    @required this.currentStation,
+    @required this.isFavourite,
+  }) : super(key: key);
+
+  final Station currentStation;
+  final bool isFavourite;
+
+  @override
+  _CurrentStationState createState() => _CurrentStationState();
+}
+
+class _CurrentStationState extends State<CurrentStation> {
+  List<Line> _lines;
+  Timer _timer;
+  DateTime _dateTime;
+
+  @override
+  void initState() {
+    super.initState();
+
+    _lines = null;
+    startTimer();
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+
+    super.dispose();
+  }
+
+  Future<void> _updateTimer() async {
+    var lines = await checkLines(widget.currentStation);
+
+    setState(() {
+      // Update once per minute.
+      startTimer();
+
+      _lines = lines;
+    });
+  }
+
+  void startTimer() {
+    _timer?.cancel();
+
+    _dateTime = DateTime.now();
+
+    _timer = Timer(
+      Duration(minutes: 1) -
+          Duration(seconds: _dateTime.second) -
+          Duration(milliseconds: _dateTime.millisecond),
+      _updateTimer,
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: <Widget>[
+        Container(
+          margin: EdgeInsets.only(bottom: 5),
+          child: (widget.currentStation != null)
+              ? LineStopHeader(
+                  widget.currentStation.description,
+                  widget.currentStation.id.toString(),
+                  favourite: widget.isFavourite,
+                  onSetFavourite: (num, isFav) {
+                    if (isFav) {
+                      Provider.of<IFavoritesManager>(context, listen: false)
+                          .saveAsFavorite(Station(int.parse(num)));
+                    } else {
+                      Provider.of<IFavoritesManager>(context, listen: false)
+                          .removeAsFavorite(Station(int.parse(num)));
+                    }
+                  },
+                )
+              : Container(),
+          /*
+               LineStopHeader(
+                  'TEST',
+                  '11',
+                  favourite: isFavourite,
+                  onSetFavourite: (num, isFav) {
+                    if (isFav) {
+                      Provider.of<IFavoritesManager>(context, listen: false)
+                          .saveAsFavorite(Station(int.parse(num)));
+                    } else {
+                      Provider.of<IFavoritesManager>(context, listen: false)
+                          .removeAsFavorite(Station(int.parse(num)));
+                    }
+                  },
+                ),
+                */
+        ),
+        Expanded(
+          child: Container(
+            margin: EdgeInsets.only(
+              left: 10,
+              right: 10,
+            ),
+            child: (_lines != null)
+                ? buildLines(_lines)
+                : FutureBuilder(
+                    future: checkLines(widget.currentStation),
+                    initialData: null,
+                    builder: (BuildContext context, AsyncSnapshot snapshot) {
+                      switch (snapshot.connectionState) {
+                        case ConnectionState.active:
+                        case ConnectionState.waiting:
+                          return Center(child: CircularProgressIndicator());
+                        case ConnectionState.done:
+                          if (snapshot.hasData) {
+                            return buildLines(snapshot.data as List<Line>);
+                          }
+
+                          if (snapshot.hasError) {
+                            Provider.of<MessageManager>(context)
+                                .showMessage(context, snapshot.error);
+                            return Container();
+                          }
+                          break;
+                        case ConnectionState.none:
+                        default:
+                          return Container();
+                      }
+
+                      return Container();
+                    },
+                  ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Future<void> update() async {
+    var lines = await checkLines(widget.currentStation);
+    setState(() {
+      _lines = lines;
+    });
+  }
+
+  Future<List<Line>> checkLines(Station station) async {
+    if (station == null) {
+      return null;
+    }
+
+    var lines = await Provider.of<TramManager>(context, listen: false)
+        .getIncomingLines(station, max: 5);
+    // Sort the lines based on their coming time
+    lines.sort((line1, line2) => line1.comingTime.compareTo(line2.comingTime));
+    return lines;
+  }
+
+  Widget buildLines(List<Line> lines) {
+    return RefreshIndicator(
+      onRefresh: update,
+      child: ListView.builder(
+        itemBuilder: (context, index) {
+          return TramLineTile(
+            lines[index].type,
+            lines[index].linenumber.toString(),
+            lines[index].direction,
+            lines[index].destination,
+            lines[index].color,
+            (lines[index].comingTime / 60).floor().toString(),
+          );
+        },
+        itemCount: lines != null ? lines.length : 0,
       ),
     );
   }
