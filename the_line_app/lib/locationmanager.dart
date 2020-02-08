@@ -6,10 +6,18 @@ class LocationCoordinates {
   LocationCoordinates(this.latitude, this.longitude);
 }
 
-class LocationManager {
+abstract class ILocationManager {
+  /// Return the [LocationCoordinates] of the current goe position.
+  /// It will return null if there was a problem retrieving the latitude and longitude
+  /// or the user did not give permission to access location.
+  Future<LocationCoordinates> getLocation();
+}
+
+class LocationManager implements ILocationManager {
   var location = new Location();
 
-  Future<LocationCoordinates> canGetLocation() async {
+  @override
+  Future<LocationCoordinates> getLocation() async {
     if (!await location.hasPermission()) {
       // try request ermission
       if (!await location.requestPermission()) {

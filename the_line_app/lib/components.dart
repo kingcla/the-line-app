@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
 import 'package:provider/provider.dart';
 
-import 'TramManager.dart';
+import 'trammanager.dart';
 import 'favoritesmanager.dart';
 import 'messagemanager.dart';
 import 'models.dart';
@@ -161,6 +161,8 @@ class TramLineTile extends StatelessWidget {
   }
 }
 
+/// Build the [LineStopHeader] holding information of the passed [Station].
+/// It will draw a list of [TramLineTile] showing [Line] infos. This list is refreshed every minute.
 class CurrentStation extends StatefulWidget {
   const CurrentStation({
     Key key,
@@ -179,6 +181,9 @@ class _CurrentStationState extends State<CurrentStation> {
   List<Line> _lines;
   Timer _timer;
   DateTime _dateTime;
+  ITramManager _tramManager;
+  IMessageManager _messageManager;
+  IFavoritesManager _favoritesManager;
 
   @override
   void initState() {
@@ -220,6 +225,15 @@ class _CurrentStationState extends State<CurrentStation> {
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+
+    _tramManager = Provider.of<ITramManager>(context);
+    _messageManager = Provider.of<IMessageManager>(context);
+    _favoritesManager = Provider.of<IFavoritesManager>(context);
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Column(
       children: <Widget>[
@@ -232,31 +246,14 @@ class _CurrentStationState extends State<CurrentStation> {
                   favourite: widget.isFavourite,
                   onSetFavourite: (num, isFav) {
                     if (isFav) {
-                      Provider.of<IFavoritesManager>(context, listen: false)
-                          .saveAsFavorite(Station(int.parse(num)));
+                      _favoritesManager.saveAsFavorite(Station(int.parse(num)));
                     } else {
-                      Provider.of<IFavoritesManager>(context, listen: false)
+                      _favoritesManager
                           .removeAsFavorite(Station(int.parse(num)));
                     }
                   },
                 )
               : Container(),
-          /*
-               LineStopHeader(
-                  'TEST',
-                  '11',
-                  favourite: isFavourite,
-                  onSetFavourite: (num, isFav) {
-                    if (isFav) {
-                      Provider.of<IFavoritesManager>(context, listen: false)
-                          .saveAsFavorite(Station(int.parse(num)));
-                    } else {
-                      Provider.of<IFavoritesManager>(context, listen: false)
-                          .removeAsFavorite(Station(int.parse(num)));
-                    }
-                  },
-                ),
-                */
         ),
         Expanded(
           child: Container(
@@ -280,8 +277,8 @@ class _CurrentStationState extends State<CurrentStation> {
                           }
 
                           if (snapshot.hasError) {
-                            Provider.of<MessageManager>(context)
-                                .showMessage(context, snapshot.error);
+                            _messageManager.showMessage(
+                                context, snapshot.error);
                             return Container();
                           }
                           break;
@@ -311,8 +308,7 @@ class _CurrentStationState extends State<CurrentStation> {
       return null;
     }
 
-    var lines = await Provider.of<TramManager>(context, listen: false)
-        .getIncomingLines(station, max: 5);
+    var lines = await _tramManager.getIncomingLines(station, max: 5);
     // Sort the lines based on their coming time
     lines.sort((line1, line2) => line1.comingTime.compareTo(line2.comingTime));
     return lines;

@@ -4,7 +4,25 @@ import 'package:http/http.dart' as http;
 
 import 'models.dart';
 
-class TramManager {
+abstract class ITramManager {
+  /// Get a list of upcoming busses and trams for a specific [station].
+  ///
+  /// It's possible to limit the number of results by using the [max] parameter. The default value is 10.
+  Future<List<Line>> getIncomingLines(Station station, {int max = 10});
+
+  /// Get a list of stops that are closest to the geographical location specified
+  /// using [latitude] and [longitude] values.
+  ///
+  /// If the list is null there was an error while requesting to the API.
+  ///
+  /// If the list is empty, there are no station nearby.
+  ///
+  /// It's possible to specify a research [range] in meters. The default is 100 meters.
+  Future<List<Station>> getNearestStations(double latitude, double longitude,
+      {int range = 100});
+}
+
+class TramManager implements ITramManager {
   static const String _locationURL =
       'https://www.delijn.be/rise-api-core/coordinaten/convert/';
 
@@ -14,9 +32,7 @@ class TramManager {
   static const String _getLinesURL =
       'https://www.delijn.be/rise-api-core/haltes/doorkomstenditmoment/';
 
-  /// Get a list of upcoming busses and trams for a specific [station].
-  ///
-  /// It's possible to limit the number of results by using the [max] parameter. The default value is 10.
+  @override
   Future<List<Line>> getIncomingLines(Station station, {int max = 10}) async {
     var client = http.Client();
     try {
@@ -39,14 +55,7 @@ class TramManager {
     }
   }
 
-  /// Get a list of stops that are closest to the geographical location specified
-  /// using [latitude] and [longitude] values.
-  ///
-  /// If the list is null there was an error while requesting to the API.
-  ///
-  /// If the list is empty, there are no station nearby.
-  ///
-  /// It's possible to specify a research [range] in meters. The default is 100 meters.
+  @override
   Future<List<Station>> getNearestStations(double latitude, double longitude,
       {int range = 100}) async {
     var client = http.Client();

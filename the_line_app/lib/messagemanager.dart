@@ -1,7 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
 
-class MessageManager {
+abstract class IMessageManager {
+  void showMessage(BuildContext ctx, String s);
+}
+
+class MessageManager implements IMessageManager {
+  @override
   void showMessage(BuildContext ctx, String s) {
     ScaffoldState scaffold = Scaffold.of(ctx);
 

@@ -3,12 +3,12 @@ import 'package:flutter/widgets.dart';
 import 'package:progress_dialog/progress_dialog.dart';
 import 'package:provider/provider.dart';
 
-import 'LocationManager.dart';
-import 'TramManager.dart';
+import 'locationmanager.dart';
 import 'components.dart';
 import 'favoritesmanager.dart';
 import 'messagemanager.dart';
 import 'models.dart';
+import 'trammanager.dart';
 
 class LinesPage extends StatefulWidget {
   LinesPage({Key key, this.selectedStation}) : super(key: key);
@@ -18,16 +18,41 @@ class LinesPage extends StatefulWidget {
   _LinesPageState createState() => _LinesPageState();
 }
 
-class _LinesPageState extends State<LinesPage> {
+class _LinesPageState extends State<LinesPage>
+    with SingleTickerProviderStateMixin {
   Station _currentStation;
   bool _isFavourite;
+
+  AnimationController _controller;
+  bool _reverted;
+  ILocationManager _locationManager;
+  ITramManager _tramManager;
+  IMessageManager _messageManager;
+  IFavoritesManager _favoritesManager;
 
   @override
   void initState() {
     super.initState();
 
+    _controller = AnimationController(
+      duration: const Duration(milliseconds: 300),
+      value: 1.0,
+      vsync: this,
+    );
+    _reverted = false;
+
     _currentStation = widget.selectedStation;
     _isFavourite = false;
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+
+    _locationManager = Provider.of<ILocationManager>(context);
+    _tramManager = Provider.of<ITramManager>(context);
+    _messageManager = Provider.of<IMessageManager>(context);
+    _favoritesManager = Provider.of<IFavoritesManager>(context);
   }
 
   @override
@@ -42,15 +67,26 @@ class _LinesPageState extends State<LinesPage> {
         ),
         floatingActionButton: ButtonBar(
           children: [
-            /*
             FloatingActionButton(
+              backgroundColor: Colors.yellow.shade100,
+              foregroundColor: Colors.grey.shade800,
               onPressed: () {
+                if (_reverted) {
+                  _controller.forward();
+                } else {
+                  _controller.reverse();
+                }
+                setState(() {
+                  _reverted = !_reverted;
+                });
                 // open the research page
               },
               tooltip: 'Search a stop',
-              child: Icon(Icons.search),
+              child: AnimatedIcon(
+                icon: AnimatedIcons.close_menu,
+                progress: _controller.view,
+              ), //Icon(Icons.search),
             ),
-            */
             Builder(
               builder: (ctx) {
                 return FloatingActionButton(
@@ -62,11 +98,9 @@ class _LinesPageState extends State<LinesPage> {
 
                     try {
                       // First get the current geo-location
-                      var loc = await Provider.of<LocationManager>(context,
-                              listen: false)
-                          .canGetLocation();
+                      var loc = await _locationManager.getLocation();
                       if (loc == null) {
-                        Provider.of<MessageManager>(context).showMessage(ctx,
+                        _messageManager.showMessage(ctx,
                             'You will need to allow the app to get the location in order to find the nearest stop');
 
                         setState(() {
@@ -78,14 +112,12 @@ class _LinesPageState extends State<LinesPage> {
                       }
 
                       // Once we have a location we get all stops close to it
-                      var stations =
-                          await Provider.of<TramManager>(context, listen: false)
-                              .getNearestStations(
+                      var stations = await _tramManager.getNearestStations(
                         loc.latitude,
                         loc.longitude,
                       );
                       if (stations == null || stations.isEmpty) {
-                        Provider.of<MessageManager>(context).showMessage(
+                        _messageManager.showMessage(
                             ctx, 'There are no stops near your position');
 
                         setState(() {
@@ -98,9 +130,7 @@ class _LinesPageState extends State<LinesPage> {
 
                       // Once we know the stop we query for the upcoming lines
                       bool isFavourite = false;
-                      var list = await Provider.of<IFavoritesManager>(context,
-                              listen: false)
-                          .getFavorites();
+                      var list = await _favoritesManager.getFavorites();
 
                       if (list != null &&
                           list.any((s) => s.id == stations[0].id)) {

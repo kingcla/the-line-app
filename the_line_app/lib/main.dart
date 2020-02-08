@@ -4,9 +4,9 @@ import 'package:The_Line_App/routes.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import 'LocationManager.dart';
-import 'TramManager.dart';
+import 'locationmanager.dart';
 import 'messagemanager.dart';
+import 'trammanager.dart';
 
 void main() => runApp(MyApp());
 
@@ -22,19 +22,19 @@ class MyApp extends StatelessWidget {
           },
           lazy: true,
         ),
-        Provider<LocationManager>(
+        Provider<ILocationManager>(
           create: (context) {
             return LocationManager();
           },
           lazy: true,
         ),
-        Provider<TramManager>(
+        Provider<ITramManager>(
           create: (context) {
             return TramManager();
           },
           lazy: true,
         ),
-        Provider<MessageManager>(
+        Provider<IMessageManager>(
           create: (context) {
             return MessageManager();
           },
