@@ -43,7 +43,7 @@ class _LineStopHeaderState extends State<LineStopHeader> {
     return Container(
       height: 85,
       decoration: BoxDecoration(
-        color: Theme.of(context).primaryColor,
+        color: Theme.of(context).colorScheme.primary,
         borderRadius: BorderRadius.circular(10),
         boxShadow: [
           BoxShadow(
@@ -113,7 +113,7 @@ class TramLineTile extends StatelessWidget {
         bottom: 10,
       ),
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.onBackground,
+        color: Theme.of(context).colorScheme.secondaryVariant,
         borderRadius: BorderRadius.circular(10),
         boxShadow: [
           BoxShadow(
@@ -217,9 +217,7 @@ class _CurrentStationState extends State<CurrentStation> {
     _dateTime = DateTime.now();
 
     _timer = Timer(
-      Duration(minutes: 1) -
-          Duration(seconds: _dateTime.second) -
-          Duration(milliseconds: _dateTime.millisecond),
+      Duration(minutes: 1) - Duration(seconds: _dateTime.second) - Duration(milliseconds: _dateTime.millisecond),
       _updateTimer,
     );
   }
@@ -248,8 +246,7 @@ class _CurrentStationState extends State<CurrentStation> {
                     if (isFav) {
                       _favoritesManager.saveAsFavorite(Station(int.parse(num)));
                     } else {
-                      _favoritesManager
-                          .removeAsFavorite(Station(int.parse(num)));
+                      _favoritesManager.removeAsFavorite(Station(int.parse(num)));
                     }
                   },
                 )
@@ -277,8 +274,7 @@ class _CurrentStationState extends State<CurrentStation> {
                           }
 
                           if (snapshot.hasError) {
-                            _messageManager.showMessage(
-                                context, snapshot.error);
+                            _messageManager.showMessage(context, snapshot.error);
                             return Container();
                           }
                           break;

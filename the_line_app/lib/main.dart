@@ -43,30 +43,46 @@ class MyApp extends StatelessWidget {
       ],
       child: MaterialApp(
         title: 'theLine App',
-        theme: getTheme(),
-        //home: LinesPage(),
+        theme: themeData1,
         onGenerateRoute: (settings) {
           return Router().generateRoute(settings);
         },
       ),
     );
   }
-
-  ThemeData getTheme() {
-    var themeData = ThemeData(
-      primarySwatch: Colors.blue,
-      textTheme: TextTheme(
-        headline: TextStyle(
-          color: Colors.white,
-        ),
-        subtitle: TextStyle(
-          color: Colors.white60,
-        ),
-      ),
-      iconTheme: IconThemeData(
-        color: Colors.white,
-      ),
-    );
-    return themeData;
-  }
 }
+
+ThemeData themeData1 = ThemeData(
+  scaffoldBackgroundColor: const Color(0xFFFFEBCF),
+  appBarTheme: AppBarTheme(
+    color: const Color(0xFF305F72),
+    brightness: Brightness.light,
+    elevation: 8,
+  ),
+  colorScheme: ColorScheme(
+    brightness: Brightness.light,
+    primary: const Color(0xFF305F72),
+    primaryVariant: const Color(0xFF305F72),
+    secondary: const Color(0xFFF18C8E),
+    secondaryVariant: const Color(0xFFF0B7A4),
+    background: const Color(0xFFFFEBCF),
+    error: Colors.red,
+    surface: Colors.grey,
+    onError: Colors.red,
+    onBackground: Colors.black,
+    onPrimary: Colors.blue,
+    onSecondary: Colors.blue,
+    onSurface: Colors.black,
+  ),
+  textTheme: TextTheme(
+    headline: TextStyle(
+      color: Colors.white,
+    ),
+    subtitle: TextStyle(
+      color: Colors.white60,
+    ),
+  ),
+  iconTheme: IconThemeData(
+    color: Colors.white,
+  ),
+);

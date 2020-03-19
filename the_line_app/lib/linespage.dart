@@ -1,3 +1,4 @@
+import 'package:The_Line_App/routes.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
 import 'package:progress_dialog/progress_dialog.dart';
@@ -18,8 +19,7 @@ class LinesPage extends StatefulWidget {
   _LinesPageState createState() => _LinesPageState();
 }
 
-class _LinesPageState extends State<LinesPage>
-    with SingleTickerProviderStateMixin {
+class _LinesPageState extends State<LinesPage> with SingleTickerProviderStateMixin {
   Station _currentStation;
   bool _isFavourite;
 
@@ -60,7 +60,7 @@ class _LinesPageState extends State<LinesPage>
     return SafeArea(
       top: true,
       child: Scaffold(
-        backgroundColor: Theme.of(context).colorScheme.background,
+        //backgroundColor: Theme.of(context).colorScheme.background,
         body: CurrentStation(
           currentStation: _currentStation,
           isFavourite: _isFavourite,
@@ -68,8 +68,7 @@ class _LinesPageState extends State<LinesPage>
         floatingActionButton: ButtonBar(
           children: [
             FloatingActionButton(
-              backgroundColor: Colors.yellow.shade100,
-              foregroundColor: Colors.grey.shade800,
+              heroTag: 'pgStations',
               onPressed: () {
                 if (_reverted) {
                   _controller.forward();
@@ -80,19 +79,16 @@ class _LinesPageState extends State<LinesPage>
                   _reverted = !_reverted;
                 });
                 // open the research page
+                Navigator.of(context).pushNamed(Router.STATIONS_PATH);
               },
               tooltip: 'Search a stop',
-              child: AnimatedIcon(
-                icon: AnimatedIcons.close_menu,
-                progress: _controller.view,
-              ), //Icon(Icons.search),
+              child: Icon(Icons.search),
             ),
             Builder(
               builder: (ctx) {
                 return FloatingActionButton(
                   onPressed: () async {
-                    var pr = new ProgressDialog(ctx,
-                        isDismissible: false, type: ProgressDialogType.Normal);
+                    var pr = new ProgressDialog(ctx, isDismissible: false, type: ProgressDialogType.Normal);
                     pr.update(message: 'Looking for stops around you...');
                     pr.show();
 
@@ -117,8 +113,7 @@ class _LinesPageState extends State<LinesPage>
                         loc.longitude,
                       );
                       if (stations == null || stations.isEmpty) {
-                        _messageManager.showMessage(
-                            ctx, 'There are no stops near your position');
+                        _messageManager.showMessage(ctx, 'There are no stops near your position');
 
                         setState(() {
                           _currentStation = null;
@@ -132,8 +127,7 @@ class _LinesPageState extends State<LinesPage>
                       bool isFavourite = false;
                       var list = await _favoritesManager.getFavorites();
 
-                      if (list != null &&
-                          list.any((s) => s.id == stations[0].id)) {
+                      if (list != null && list.any((s) => s.id == stations[0].id)) {
                         isFavourite = true;
                       } else {
                         isFavourite = false;

@@ -1,5 +1,7 @@
 import 'dart:ui';
 
+import 'package:The_Line_App/locationmanager.dart';
+
 class MapCoordinates {
   double x, y;
 
@@ -17,6 +19,7 @@ class Station {
   List<String> destinations;
   List<Line> lines;
   List<TimeTable> timetables;
+  LocationCoordinates location;
 
   Station(
     this.id, {
@@ -25,17 +28,18 @@ class Station {
     this.destinations,
     this.lines,
     this.timetables,
+    this.location,
   });
 
   factory Station.fromJson(Map<String, dynamic> data) {
     return Station(
       data['halteNummer'], //number of the stop
       description: data['omschrijvingLang'],
-      destinations: (data['bestemmingen'] != null)
-          ? List.from(data['bestemmingen'])
-          : null,
-      lines: (data['lijnen'] != null)
-          ? (data['lijnen'] as List).map((line) => Line.fromJson(line)).toList()
+      destinations: (data['bestemmingen'] != null) ? List.from(data['bestemmingen']) : null,
+      lines: (data['lijnen'] != null) ? (data['lijnen'] as List).map((line) => Line.fromJson(line)).toList() : null,
+      location: (data['coordinaat'] != null)
+          ? LocationCoordinates(
+              (data['coordinaat'] as Map<String, dynamic>)['lt'], ((data['coordinaat'] as Map<String, dynamic>)['ln']))
           : null,
     );
   }
@@ -107,26 +111,17 @@ class Line {
   LineType type;
   int comingTime;
 
-  Line(this.linenumber, this.destination, this.color, this.type,
-      {this.isRealTime, this.direction, this.comingTime});
+  Line(this.linenumber, this.destination, this.color, this.type, {this.isRealTime, this.direction, this.comingTime});
 
   factory Line.fromJson(Map<String, dynamic> data) {
-    var realTime = (data.containsKey('predictionStatussen'))
-        ? (data['predictionStatussen'] as List).contains('REALTIME')
-        : false;
+    var realTime =
+        (data.containsKey('predictionStatussen')) ? (data['predictionStatussen'] as List).contains('REALTIME') : false;
 
-    var seconds = ((data.containsKey('vertrekCalendar') ||
-                data.containsKey('vertrekRealtimeTijdstip')) &&
-            (data['vertrekCalendar'] != null ||
-                data['vertrekRealtimeTijdstip'] != null))
+    var seconds = ((data.containsKey('vertrekCalendar') || data.containsKey('vertrekRealtimeTijdstip')) &&
+            (data['vertrekCalendar'] != null || data['vertrekRealtimeTijdstip'] != null))
         ? (realTime)
-            ? DateTime.fromMillisecondsSinceEpoch(
-                    data['vertrekRealtimeTijdstip'])
-                .difference(DateTime.now())
-                .inSeconds
-            : DateTime.fromMillisecondsSinceEpoch(data['vertrekCalendar'])
-                .difference(DateTime.now())
-                .inSeconds
+            ? DateTime.fromMillisecondsSinceEpoch(data['vertrekRealtimeTijdstip']).difference(DateTime.now()).inSeconds
+            : DateTime.fromMillisecondsSinceEpoch(data['vertrekCalendar']).difference(DateTime.now()).inSeconds
         : -1;
 
     var type = LineType.undefined;
@@ -146,9 +141,7 @@ class Line {
     return Line(
       data['lijnNummer'],
       data['bestemming'],
-      (data['kleurAchterGrond'] != null)
-          ? HexColor.fromHex(data['kleurAchterGrond'])
-          : Color(0),
+      (data['kleurAchterGrond'] != null) ? HexColor.fromHex(data['kleurAchterGrond']) : Color(0),
       type,
       isRealTime: realTime,
       direction: data['lijnRichting'],
