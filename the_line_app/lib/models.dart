@@ -103,17 +103,32 @@ class Line {
   "viaBestemming": "",
   "voertuigNummer": "111830"
   */
-  String destination;
-  String direction;
-  num linenumber;
-  Color color;
-  bool isRealTime;
-  LineType type;
-  int comingTime;
+  final String destination;
+  final String direction;
+  final num linenumber;
+  final Color color;
+  final bool isRealTime;
+  final bool isCancelled;
+  final LineType type;
+  final int comingTime;
 
-  Line(this.linenumber, this.destination, this.color, this.type, {this.isRealTime, this.direction, this.comingTime});
+  Line(
+    this.linenumber,
+    this.destination,
+    this.color,
+    this.type,
+    this.isCancelled, {
+    this.isRealTime,
+    this.direction,
+    this.comingTime,
+  });
 
   factory Line.fromJson(Map<String, dynamic> data) {
+    var isCancelled = (data.containsKey('predictionStatussen'))
+        ? ((data['predictionStatussen'] as List).contains('CANCELLED') ||
+            (data['predictionStatussen'] as List).contains('DELETED'))
+        : false;
+
     var realTime =
         (data.containsKey('predictionStatussen')) ? (data['predictionStatussen'] as List).contains('REALTIME') : false;
 
@@ -143,6 +158,7 @@ class Line {
       data['bestemming'],
       (data['kleurAchterGrond'] != null) ? HexColor.fromHex(data['kleurAchterGrond']) : Color(0),
       type,
+      isCancelled,
       isRealTime: realTime,
       direction: data['lijnRichting'],
       comingTime: seconds,

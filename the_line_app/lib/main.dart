@@ -70,7 +70,7 @@ ThemeData themeData1 = ThemeData(
     surface: Colors.grey,
     onError: Colors.red,
     onBackground: Colors.black,
-    onPrimary: Colors.blue,
+    onPrimary: Colors.white,
     onSecondary: Colors.blue,
     onSurface: Colors.black,
   ),

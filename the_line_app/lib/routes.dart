@@ -22,11 +22,8 @@ class Router {
         );
       // LOCATION
       case LOCATION_PATH:
-        Station station = settings.arguments;
         return MaterialPageRoute(
-          builder: (_) => LinesPage(
-            selectedStation: station,
-          ),
+          builder: (_) => LinesPage(),
           fullscreenDialog: false,
           maintainState: true,
         );

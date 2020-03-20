@@ -1,7 +1,9 @@
 import 'dart:async';
+import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:provider/provider.dart';
 
 import 'trammanager.dart';
@@ -89,13 +91,15 @@ class _LineStopHeaderState extends State<LineStopHeader> {
 }
 
 class TramLineTile extends StatelessWidget {
-  const TramLineTile(
+  const TramLineTile({
     this.type,
     this.number,
     this.name,
     this.direction,
     this.color,
-    this.minutes, {
+    this.minutes,
+    this.cancelled,
+    this.realTime,
     Key key,
   }) : super(key: key);
 
@@ -105,6 +109,8 @@ class TramLineTile extends StatelessWidget {
   final Color color;
   final String direction;
   final String minutes;
+  final bool cancelled;
+  final bool realTime;
 
   @override
   Widget build(BuildContext context) {
@@ -113,7 +119,7 @@ class TramLineTile extends StatelessWidget {
         bottom: 10,
       ),
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.secondaryVariant,
+        color: Theme.of(context).colorScheme.onPrimary,
         borderRadius: BorderRadius.circular(10),
         boxShadow: [
           BoxShadow(
@@ -129,10 +135,12 @@ class TramLineTile extends StatelessWidget {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: <Widget>[
+              // Line type: Bus or Tram
               Icon(
                 type == LineType.tram ? Icons.tram : Icons.directions_bus,
-                color: Colors.black54,
+                color: realTime ? Colors.green[300] : Colors.black54,
               ),
+              // Line number and color
               Container(
                 decoration: BoxDecoration(
                   color: color,
@@ -152,10 +160,19 @@ class TramLineTile extends StatelessWidget {
           ),
         ),
         subtitle: Text('direction $direction'),
-        trailing: Text(
-          '$minutes\'',
-          textScaleFactor: 2,
-        ),
+        trailing: Builder(builder: (context) {
+          if (cancelled) {
+            return Icon(
+              Icons.warning,
+              color: Colors.red,
+            );
+          } else {
+            return Text(
+              '$minutes\'',
+              textScaleFactor: 2,
+            );
+          }
+        }),
       ),
     );
   }
@@ -168,10 +185,12 @@ class CurrentStation extends StatefulWidget {
     Key key,
     @required this.currentStation,
     @required this.isFavourite,
+    this.maxLines = 5,
   }) : super(key: key);
 
   final Station currentStation;
   final bool isFavourite;
+  final int maxLines;
 
   @override
   _CurrentStationState createState() => _CurrentStationState();
@@ -304,7 +323,7 @@ class _CurrentStationState extends State<CurrentStation> {
       return null;
     }
 
-    var lines = await _tramManager.getIncomingLines(station, max: 5);
+    var lines = await _tramManager.getIncomingLines(station, max: widget.maxLines);
     // Sort the lines based on their coming time
     lines.sort((line1, line2) => line1.comingTime.compareTo(line2.comingTime));
     return lines;
@@ -316,15 +335,130 @@ class _CurrentStationState extends State<CurrentStation> {
       child: ListView.builder(
         itemBuilder: (context, index) {
           return TramLineTile(
-            lines[index].type,
-            lines[index].linenumber.toString(),
-            lines[index].direction,
-            lines[index].destination,
-            lines[index].color,
-            (lines[index].comingTime / 60).floor().toString(),
+            type: lines[index].type,
+            number: lines[index].linenumber.toString(),
+            name: lines[index].direction,
+            direction: lines[index].destination,
+            color: lines[index].color,
+            cancelled: lines[index].isCancelled,
+            realTime: lines[index].isRealTime,
+            minutes: max((lines[index].comingTime / 60).floor(), 0).toString(),
           );
         },
         itemCount: lines != null ? lines.length : 0,
+      ),
+    );
+  }
+}
+
+class LocalMap extends StatefulWidget {
+  const LocalMap({
+    Key key,
+    @required this.latitude,
+    @required this.longitude,
+    this.zoom = 0,
+    this.latShift = 0,
+    this.lonShift = 0,
+  }) : super(key: key);
+
+  final double latitude;
+  final double longitude;
+  final double latShift;
+  final double lonShift;
+  final double zoom;
+
+  static final CameraPosition _zero = CameraPosition(
+    target: LatLng(0, 0),
+    zoom: 1,
+  );
+
+  @override
+  _LocalMapState createState() => _LocalMapState();
+}
+
+class _LocalMapState extends State<LocalMap> {
+  Completer<GoogleMapController> _controller = Completer();
+
+  Future<void> _goToPosition(double latitude, double longitude) async {
+    final GoogleMapController controller = await _controller.future;
+    await controller.animateCamera(CameraUpdate.newCameraPosition(
+      CameraPosition(
+        target: LatLng(
+          latitude + widget.latShift,
+          longitude + widget.lonShift,
+        ),
+        zoom: widget.zoom,
+      ),
+    ));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_controller.isCompleted) {
+      _goToPosition(widget.latitude, widget.longitude);
+    }
+
+    return SizedBox.expand(
+      child: GoogleMap(
+        rotateGesturesEnabled: false,
+        scrollGesturesEnabled: false,
+        tiltGesturesEnabled: false,
+        zoomGesturesEnabled: false,
+        markers: Set<Marker>.from(
+          [
+            Marker(
+              markerId: MarkerId('place'),
+              position: LatLng(widget.latitude, widget.longitude),
+            )
+          ],
+        ),
+        padding: EdgeInsets.all(5),
+        mapType: MapType.normal,
+        initialCameraPosition: LocalMap._zero,
+        onMapCreated: (GoogleMapController controller) {
+          _controller.complete(controller);
+        },
+      ),
+    );
+  }
+}
+
+class OptionButton extends StatelessWidget {
+  const OptionButton({
+    Key key,
+    this.icon,
+    this.text,
+    @required this.onPressed,
+  }) : super(key: key);
+
+  final IconData icon;
+  final String text;
+  final Function onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return RaisedButton(
+      onPressed: onPressed,
+      elevation: 8,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.all(Radius.circular(8.0)),
+      ),
+      color: Theme.of(context).colorScheme.secondary,
+      textColor: Theme.of(context).textTheme.headline.color,
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.start,
+        mainAxisSize: MainAxisSize.max,
+        children: <Widget>[
+          Icon(icon),
+          Expanded(
+            child: Center(
+              child: Text(
+                text,
+                textScaleFactor: 1.5,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
